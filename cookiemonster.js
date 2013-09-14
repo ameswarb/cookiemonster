@@ -108,6 +108,16 @@ function catchGoldenCookies() {
         console.log("caught a golden cookie!!!");
     }
 }
+
+
+function balanceInThreeMins() {
+    return Game.cookies + (Game.cookiesPs * 180);
+}
+
+
+function worthSavingFactor() {
+    return balanceInThreeMins() / Game.cookies;
+}
  
  
 function fetchGameObjects() {
@@ -121,7 +131,20 @@ function fetchGameObjects() {
     }
     return eligibleGameObjects;
 }
- 
+
+
+function fetchSavingsObjects() {
+    eligibleSavingsObjects = new Array();
+    for (var i in Game.ObjectsById)
+    {
+        var me=Game.ObjectsById[i];
+        if (me.price > Game.cookies && me.price < balanceInThreeMins()) {
+            eligibleSavingsObjects.push(me);
+        }
+    }
+    return eligibleSavingsObjects;
+}
+
  
 function fetchGameUpgrades() {
     eligibleGameUpgrades = new Array();
@@ -133,6 +156,19 @@ function fetchGameUpgrades() {
         }
     }
     return eligibleGameUpgrades;
+}
+
+
+function fetchSavingsUpgrades() {
+    eligibleSavingsUpgrades = new Array();
+    for (var i in Game.UpgradesById)
+    {
+        var me=Game.UpgradesById[i];
+        if (me.unlocked == 1 && me.bought != 1 && me.basePrice > Game.cookies && me.basePrice < balanceInThreeMins()) {
+            eligibleSavingsUpgrades.push(me);
+        }
+    }
+    return eligibleSavingsUpgrades;
 }
  
  
@@ -268,48 +304,148 @@ function predictGains(type, id, gameObject) {
  
 function analyzeCostBenefit() {
     costBenefits = new Array();
+    savingsBenefits = new Array();
  
     eligibleGameObjects = fetchGameObjects();
-    for (var i in eligibleGameObjects)
-    {
-        currentGameObject = eligibleGameObjects[i];
-        predictedGains = predictGains("object", '', currentGameObject.name);
-        currentCostBenefit = {"type": "object", "id": currentGameObject.id, "gains": predictedGains}
-        costBenefits.push(currentCostBenefit);
-        //console.log(currentGameObject.id);
+    if (typeof eligibleGameObjects !== 'undefined' && eligibleGameObjects.length > 0) {
+        for (var i in eligibleGameObjects)
+        {
+            currentGameObject = eligibleGameObjects[i];
+            //console.log(currentGameObject.name);
+            predictedGains = predictGains("object", '', currentGameObject.name);
+            currentCostBenefit = {
+                                    "type": "object", 
+                                    "id": currentGameObject.id, 
+                                    "gains": predictedGains, 
+                                    "cpcps": predictedGains / currentGameObject.price,
+                                    "action": "buy"
+                                };
+            costBenefits.push(currentCostBenefit);
+            //console.log("buy: " + currentCostBenefit);
+            //console.log(currentGameObject.id);
+        }
     }
  
     eligibleGameUpgrades = fetchGameUpgrades();
-    for (var i in eligibleGameUpgrades)
-    {
-        currentGameUpgrade = eligibleGameUpgrades[i];
-        predictedGains = predictGains("upgrade", currentGameUpgrade.id);
-        currentCostBenefit = {"type": "upgrade", "id": currentGameUpgrade.id, "gains": predictedGains}
-        costBenefits.push(currentCostBenefit);
-        //console.log(currentGameUpgrade.id);
+    if (typeof eligibleGameUpgrades !== 'undefined' && eligibleGameUpgrades.length > 0) {
+        for (var i in eligibleGameUpgrades)
+        {
+            currentGameUpgrade = eligibleGameUpgrades[i];
+            //console.log(currentGameUpgrade.name);
+            predictedGains = predictGains("upgrade", currentGameUpgrade.id);
+            currentCostBenefit = {
+                                    "type": "upgrade",
+                                    "id": currentGameUpgrade.id,
+                                    "gains": predictedGains,
+                                    "cpcps": predictedGains / currentGameUpgrade.basePrice,
+                                    "action": "buy"
+                                }
+            costBenefits.push(currentCostBenefit);
+            //console.log("buy: " + currentCostBenefit);
+            //console.log(currentGameUpgrade.id);
+        }
+    }
+
+
+    eligibleSavingsObjects = fetchSavingsObjects();
+    if (typeof eligibleSavingsObjects !== 'undefined' && eligibleSavingsObjects.length > 0) {
+        for (var i in eligibleSavingsObjects)
+        {
+            currentSavingsObject = eligibleSavingsObjects[i];
+            //console.log(currentSavingsObject.name);
+            predictedGains = predictGains("object", '', currentSavingsObject.name);
+            currentSavingsBenefit = {
+                                        "type": "object",
+                                        "id": currentSavingsObject.id,
+                                        "gains": predictedGains,
+                                        "cpcps": predictedGains / currentGameUpgrade.basePrice,
+                                        "action": "save"
+                                    }
+            savingsBenefits.push(currentSavingsBenefit);
+            //console.log("save: " + currentSavingsBenefit);
+        }
+    }
+
+
+    eligibleSavingsUpgrades = fetchSavingsUpgrades();
+    if (typeof eligibleSavingsUpgrades !== 'undefined' && eligibleSavingsUpgrades.length > 0) {
+    for (var i in eligibleSavingsUpgrades)
+        {
+            currentSavingsUpgrade = eligibleSavingsUpgrades[i];
+            //console.log(currentSavingsUpgrade.name);
+            predictedGains = predictGains("upgrade", currentSavingsUpgrade.id);
+            currentSavingsBenefit = {
+                                        "type": "object",
+                                        "id": currentSavingsObject.id,
+                                        "gains": predictedGains,
+                                        "cpcps": predictedGains / currentGameUpgrade.basePrice,
+                                        "action": "save"
+                                    }
+            savingsBenefits.push(currentSavingsBenefit);
+            //console.log("save: " + currentSavingsBenefit);
+        }
     }
  
     costBenefits.sort(function(a,b) {
         // sorts costBenefits array by gains descending
-        return b.gains - a.gains;
+        return b.cpcps - a.cpcps;
     });
- 
-    return costBenefits;
+
+    savingsBenefits.sort(function(a,b) {
+        // sorts costBenefits array by gains descending
+        return b.cpcps - a.cpcps;
+    });
+
+    if(typeof savingsBenefits !== 'undefined' 
+        && savingsBenefits.length > 0
+        && typeof costBenefits !== 'undefined'
+        && costBenefits.length > 0)
+    {
+        saveFactor = savingsBenefits[0].cpcps / costBenefits[0].cpcps;
+
+    } else if(typeof savingsBenefits !== 'undefined' && savingsBenefits.length > 0) {
+        saveFactor = 99999999;
+    } else {
+        saveFactor = 0;
+    }
+
+    console.log("save factor: " + saveFactor);
+    console.log("worth save:  " + worthSavingFactor());
+    
+    if(saveFactor > worthSavingFactor()) {
+        return savingsBenefits;
+    } else {
+        return costBenefits;
+    }
+    
 }
  
  
 function buySomething() {
     costBenefits = analyzeCostBenefit();
     selection = costBenefits[0];
-    if (selection.type == "object") {
-        selectedProduct = Game.ObjectsById[selection.id];
-        console.log("bought " + selectedProduct.name);
-        selectedProduct.buy();
-    } else if (selection.type == "upgrade") {
-        selectedProduct = Game.UpgradesById[selection.id];
-        console.log("bought " + selectedProduct.name);
-        selectedProduct.buy();
+    if (selection.action == "buy") 
+    {
+        if (selection.type == "object") 
+        {
+            selectedProduct = Game.ObjectsById[selection.id];
+            console.log("bought " + selectedProduct.name);
+            selectedProduct.buy();
+        } else if (selection.type == "upgrade") {
+            selectedProduct = Game.UpgradesById[selection.id];
+            console.log("bought " + selectedProduct.name);
+            selectedProduct.buy();
+        }
+    } else {
+        if (selection.type == "object") {
+            selectedProduct = Game.ObjectsById[selection.id];
+        } else if (selection.type == "upgrade") {
+            selectedProduct = Game.UpgradesById[selection.id];
+        }
+        
+        console.log("saving for " + selectedProduct.name);
     }
+    
 }
  
 var clickIter = 0;
@@ -321,7 +457,7 @@ function runBot() {
         catchGoldenCookies();
         Game.ClickCookie();
         buyCounter = buyCounter + 1;
-        if (buyCounter % 100 == 0) {
+        if (buyCounter % 30 == 0) {
             buySomething();
         }
     },100)
