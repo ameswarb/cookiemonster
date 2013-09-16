@@ -97,7 +97,17 @@ var upgradeLookup = {"data": [
         {"id": 95, "type": "global_multiplier", "object": ''},
         {"id": 96, "type": "global_multiplier", "object": ''},
         {"id": 97, "type": "global_multiplier", "object": ''},
-        {"id": 98, "type": "global_multiplier", "object": ''}
+        {"id": 98, "type": "global_multiplier", "object": ''},
+        {"id": 99, "type": "object", "object": 'Antimatter condenser'},
+        {"id": 100, "type": "object", "object": 'Antimatter condenser'},
+        {"id": 101, "type": "object", "object": 'Antimatter condenser'},
+        {"id": 102, "type": "object", "object": 'Antimatter condenser'},
+        {"id": 103, "type": "object", "object": 'Grandma'},
+        {"id": 104, "type": "global_multiplier", "object": ''},
+        {"id": 105, "type": "global_multiplier", "object": ''},
+        {"id": 106, "type": "global_multiplier", "object": ''},
+        {"id": 107, "type": "global_multiplier", "object": ''},
+        {"id": 108, "type": "global_multiplier", "object": ''}
     ]};
  
  
