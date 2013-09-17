@@ -239,13 +239,11 @@ function predictGains(type, id, gameObject) {
         game_id = getGameObjectIDByName(gameObject);
         //currentObject = Game.ObjectsByID[game_id];
         currentObject = Game.ObjectsById[game_id];
-        if (currentObject.amount > 0) {
-            estimatedGains = currentObject.storedTotalCps / currentObject.amount;
-        } else if (typeof currentObject.cps != 'undefined') {
+        if (currentObject.amount == 0) 
+        {
             estimatedGains = currentObject.cps();
         } else {
-            estimatedGains = 99999; //exception, buy it
-            console.log("exception, object doesn't have cps function");
+            estimatedGains = currentObject.storedTotalCps / currentObject.amount;
         }
        
     }
@@ -267,7 +265,7 @@ function predictGains(type, id, gameObject) {
             currentObjectID = getGameObjectIDByName(currentLookup.object);
             //console.log(currentLookup.object);
             currentObject = Game.ObjectsById[currentObjectID];
-            currentUpgrade= Game.UpgradesById[id];
+            currentUpgrade = Game.UpgradesById[id];
             if (typeof currentObject.cps != 'undefined') {
                 currentCpsPerUnit = currentObject.cps();
             } else {
@@ -321,16 +319,17 @@ function analyzeCostBenefit() {
         for (var i in eligibleGameObjects)
         {
             currentGameObject = eligibleGameObjects[i];
-            //console.log(currentGameObject.name);
             predictedGains = predictGains("object", '', currentGameObject.name);
             currentCostBenefit = {
                                     "type": "object", 
                                     "id": currentGameObject.id, 
                                     "gains": predictedGains, 
                                     "cpcps": predictedGains / currentGameObject.price,
+                                    "roi": currentGameObject.price / predictedGains,
                                     "action": "buy"
                                 };
             costBenefits.push(currentCostBenefit);
+            console.log(currentGameObject.name + " - " + currentCostBenefit.roi);
             //console.log("buy: " + currentCostBenefit);
             //console.log(currentGameObject.id);
         }
@@ -348,6 +347,7 @@ function analyzeCostBenefit() {
                                     "id": currentGameUpgrade.id,
                                     "gains": predictedGains,
                                     "cpcps": predictedGains / currentGameUpgrade.basePrice,
+                                    "roi": currentGameUpgrade.basePrice / predictedGains,
                                     "action": "buy"
                                 }
             costBenefits.push(currentCostBenefit);
@@ -368,9 +368,11 @@ function analyzeCostBenefit() {
                                         "type": "object",
                                         "id": currentSavingsObject.id,
                                         "gains": predictedGains,
-                                        "cpcps": predictedGains / currentGameUpgrade.basePrice,
+                                        "cpcps": predictedGains / currentSavingsObject.price,
+                                        "roi": currentSavingsObject.price / predictedGains,
                                         "action": "save"
                                     }
+            console.log(currentSavingsObject.name + " - " + currentSavingsBenefit.roi);
             savingsBenefits.push(currentSavingsBenefit);
             //console.log("save: " + currentSavingsBenefit);
         }
@@ -386,9 +388,10 @@ function analyzeCostBenefit() {
             predictedGains = predictGains("upgrade", currentSavingsUpgrade.id);
             currentSavingsBenefit = {
                                         "type": "object",
-                                        "id": currentSavingsObject.id,
+                                        "id": currentSavingsUpgrade.id,
                                         "gains": predictedGains,
-                                        "cpcps": predictedGains / currentGameUpgrade.basePrice,
+                                        "cpcps": predictedGains / currentSavingsUpgrade.basePrice,
+                                        "roi": currentSavingsUpgrade.price / predictedGains,
                                         "action": "save"
                                     }
             savingsBenefits.push(currentSavingsBenefit);
@@ -398,36 +401,11 @@ function analyzeCostBenefit() {
  
     costBenefits.sort(function(a,b) {
         // sorts costBenefits array by gains descending
-        return b.cpcps - a.cpcps;
+        return a.roi - b.roi;
     });
+    costBenefits = costBenefits.concat(savingsBenefits);
 
-    savingsBenefits.sort(function(a,b) {
-        // sorts costBenefits array by gains descending
-        return b.cpcps - a.cpcps;
-    });
-
-    if(typeof savingsBenefits !== 'undefined' 
-        && savingsBenefits.length > 0
-        && typeof costBenefits !== 'undefined'
-        && costBenefits.length > 0)
-    {
-        saveFactor = savingsBenefits[0].cpcps / costBenefits[0].cpcps;
-
-    } else if(typeof savingsBenefits !== 'undefined' && savingsBenefits.length > 0) {
-        saveFactor = 99999999;
-    } else {
-        saveFactor = 0;
-    }
-
-    console.log("save factor: " + saveFactor);
-    console.log("worth save:  " + worthSavingFactor());
-    
-    if(saveFactor > worthSavingFactor()) {
-        return savingsBenefits;
-    } else {
-        return costBenefits;
-    }
-    
+    return costBenefits;    
 }
  
  
